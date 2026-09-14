@@ -69,3 +69,55 @@ test('format preserves full cell conditions, filters day and does not fabricate 
     0,
   );
 });
+
+test('hyperlinks containing nested rich text preserve subjects, teachers and conditions', async () => {
+  const { cellValueText } = await import('../server/schedule.mjs');
+  const value = {
+    text: {
+      richText: [
+        { text: 'Дисциплина по выбору:\n' },
+        { font: { bold: true }, text: 'Функциональное программирование\n' },
+        { text: 'Преподаватель И.И.\n1305\nс 14 сентября' },
+      ],
+    },
+    hyperlink: 'https://example.org/lesson',
+  };
+  assert.equal(
+    cellValueText(value),
+    'Дисциплина по выбору:\nФункциональное программирование\nПреподаватель И.И.\n1305\nс 14 сентября',
+  );
+  assert.equal(
+    cellValueText({
+      formula: 'A1',
+      result: { richText: [{ text: 'Лекция' }] },
+    }),
+    'Лекция',
+  );
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Расписание');
+  sheet.getCell('C2').value = '11-401';
+  sheet.getCell('D2').value = '11-402';
+  sheet.getCell('A3').value = 'ПОНЕДЕЛЬНИК';
+  sheet.getCell('B3').value = '08.30-10.00';
+  sheet.mergeCells('C3:D3');
+  sheet.getCell('C3').value = value;
+  for (const group of parseSchedule(workbook))
+    assert.equal(group.lessons[0].details, cellValueText(value));
+});
+
+test('bundled timetable contains no object stringification artifacts', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const data = JSON.parse(
+    await readFile(
+      new URL('../server/data/timetable.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  assert.ok(data.groups.length > 0);
+  for (const group of data.groups)
+    for (const lesson of group.lessons)
+      assert.ok(
+        !lesson.details.includes('[object Object]'),
+        `${group.group} ${lesson.cell}`,
+      );
+});

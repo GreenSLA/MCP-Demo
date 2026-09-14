@@ -14,8 +14,21 @@ const DAYS = [
 ];
 let cached;
 let pending;
+// ExcelJS can nest rich text inside a hyperlink's `text` property.
+// String(cell.text) would stringify that object instead of its visible runs.
+export function cellValueText(value) {
+  if (value == null) return '';
+  if (typeof value !== 'object') return String(value);
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value.richText))
+    return value.richText.map((run) => cellValueText(run.text)).join('');
+  if ('text' in value) return cellValueText(value.text);
+  if ('result' in value) return cellValueText(value.result);
+  if ('error' in value) return String(value.error);
+  throw new Error('Неизвестный формат ячейки расписания.');
+}
 const text = (cell) =>
-  String(cell.master.value == null ? '' : cell.master.text)
+  cellValueText(cell.master.value)
     .replace(/\r/g, '')
     .replace(/\u00a0/g, ' ')
     .trim();
