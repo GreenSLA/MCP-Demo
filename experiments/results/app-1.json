@@ -1,0 +1,89 @@
+{
+  "question": "Где находится ИТИС и как связаться с институтом?",
+  "events": [
+    {
+      "type": "status",
+      "message": "Выбираю способ поиска…"
+    },
+    {
+      "type": "status",
+      "message": "Ищу на официальных страницах КФУ…"
+    },
+    {
+      "type": "tool",
+      "step": {
+        "name": "search_kfu",
+        "arguments": {
+          "query": "ИТИС контакты адрес"
+        },
+        "status": "done",
+        "detail": "5 результатов · 18 страниц в корпусе"
+      }
+    },
+    {
+      "type": "sources",
+      "sources": [
+        {
+          "url": "https://kpfu.ru/itis/studencheskaya-zhizn",
+          "title": "Студенческое самоуправление",
+          "fetchedAt": "2026-10-05T14:59:58.875Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/struktura-itis-123077",
+          "title": "Команда ИТИС",
+          "fetchedAt": "2026-10-05T14:59:57.392Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis",
+          "title": "Институт информационных технологий и интеллектуальных систем",
+          "fetchedAt": "2026-10-05T14:59:57.768Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/pochemu-itis",
+          "title": "Преимущества учебы в ИТИС",
+          "fetchedAt": "2026-10-05T14:59:58.781Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/abiturientam-123538",
+          "title": "Поступление в ИТИС",
+          "fetchedAt": "2026-10-05T14:59:57.422Z"
+        }
+      ]
+    },
+    {
+      "type": "status",
+      "message": "Сопоставляю источники…"
+    },
+    {
+      "type": "answer",
+      "content": "Институт информационных технологий и интеллектуальных систем (ИТИС) находится по адресу: 420008, г. Казань, ул. Кремлевская, 35.\n\nСвязаться с ИТИС можно следующими способами:\n*   Телефон: +7 (843) 206-52-33 [https://kpfu.ru/itis/pochemu-itis](https://kpfu.ru/itis/pochemu-itis)\n*   Почта: itis@kpfu.ru [https://kpfu.ru/itis/pochemu-itis](https://kpfu.ru/itis/pochemu-itis)\n*   Для абитуриентов есть телефон горячей линии: 8-960-067-65-12 (с 20.06.2026) [https://kpfu.ru/itis/abiturientam-123538](https://kpfu.ru/itis/abiturientam-123538)\n*   Также есть Telegram-чат для вопросов абитуриентов в ИТИС [https://kpfu.ru/itis/abiturientam-123538](https://kpfu.ru/itis/abiturientam-123538)",
+      "sources": [
+        {
+          "url": "https://kpfu.ru/itis/studencheskaya-zhizn",
+          "title": "Студенческое самоуправление",
+          "fetchedAt": "2026-10-05T14:59:58.875Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/struktura-itis-123077",
+          "title": "Команда ИТИС",
+          "fetchedAt": "2026-10-05T14:59:57.392Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis",
+          "title": "Институт информационных технологий и интеллектуальных систем",
+          "fetchedAt": "2026-10-05T14:59:57.768Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/pochemu-itis",
+          "title": "Преимущества учебы в ИТИС",
+          "fetchedAt": "2026-10-05T14:59:58.781Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/abiturientam-123538",
+          "title": "Поступление в ИТИС",
+          "fetchedAt": "2026-10-05T14:59:57.422Z"
+        }
+      ]
+    }
+  ]
+}

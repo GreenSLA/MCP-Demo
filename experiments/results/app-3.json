@@ -1,0 +1,89 @@
+{
+  "question": "Какие стипендиальные программы доступны студентам ИТИС?",
+  "events": [
+    {
+      "type": "status",
+      "message": "Выбираю способ поиска…"
+    },
+    {
+      "type": "status",
+      "message": "Ищу на официальных страницах КФУ…"
+    },
+    {
+      "type": "tool",
+      "step": {
+        "name": "search_kfu",
+        "arguments": {
+          "query": "стипендии ИТИС КФУ"
+        },
+        "status": "done",
+        "detail": "5 результатов · 24 страниц в корпусе"
+      }
+    },
+    {
+      "type": "sources",
+      "sources": [
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy",
+          "title": "Стипендиальные программы",
+          "fetchedAt": "2026-10-05T14:59:58.266Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-huawei",
+          "title": "Стипендия HUAWEI",
+          "fetchedAt": "2026-09-07T17:26:48.920Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-pravitelstva-rf-po-prioritetnym",
+          "title": "Стипендия Правительства РФ по приоритетным направлениям во 2 семестре 2021/22 учебного года",
+          "fetchedAt": "2026-09-07T17:26:48.927Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-fonda-vladimira-potanina",
+          "title": "Стипендия фонда Владимира Потанина",
+          "fetchedAt": "2026-09-07T17:26:48.995Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-akademii-nauk-rt-na-vesenne-letnij",
+          "title": "Стипендия Академии наук РТ на весенне-летний семестр 2021/22 учебного года",
+          "fetchedAt": "2026-09-07T17:26:49.362Z"
+        }
+      ]
+    },
+    {
+      "type": "status",
+      "message": "Сопоставляю источники…"
+    },
+    {
+      "type": "answer",
+      "content": "Студентам ИТИС доступны различные стипендиальные программы:\n\n*   **Государственная академическая стипендия** и **повышенная государственная академическая стипендия** за особые достижения [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy).\n*   **Стипендии студентам, закончившим лицеи КФУ**, и другие стипендии за достижения в учебной деятельности (в том числе именные) [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy).\n*   **Социальная стипендия и материальная поддержка** [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy).\n*   **Стипендия HUAWEI** для бакалавров 3-го, 4-го курсов и магистров 1-го, 2-го курсов очной формы обучения, граждан РФ [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-huawei](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-huawei). Обратите внимание, что информация о стипендии HUAWEI датирована 2021/22 учебным годом и может быть устаревшей.\n*   **Стипендия фонда Владимира Потанина** [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-fonda-vladimira-potanina](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-fonda-vladimira-potanina). Информация о ней также датирована 2021/22 учебным годом.\n*   **Стипендия Правительства РФ по приоритетным направлениям** [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-pravitelstva-rf-po-prioritetnym](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-pravitelstva-rf-po-prioritetnym). Информация о ней датирована 2021/22 учебным годом.\n*   **Стипендия Академии наук РТ** на весенне-летний семестр [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-akademii-nauk-rt-na-vesenne-letnij](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-akademii-nauk-rt-na-vesenne-letnij). Информация о ней датирована 2021/22 учебным годом.\n\nДля получения подробной информации о государственной академической стипендии, повышенной государственной академической стипендии и других стипендиях за достижения в учебной деятельности можно обратиться к заместителю директора ИТИС по образовательной деятельности Лаврентьевой Елене Евгеньевне (т. +7 (843) 206-52-33 (доб.3513), ауд. 1506) и к специалисту по учебно-методической работе Глумовой Татьяне Анатольевне (т. +7 (843) 206-52-33 (доб.3535), ауд. 1510в) [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy).\n\nПо вопросам назначения социальной стипендии и материальной поддержки можно проконсультироваться у заместителя директора по социально-воспитательной работе Бакировой Айсылу Наримовны (т. +7 (843) 206-52-33 (доб.3514), ауд. 1510б, E-mail: ab@it.kfu.ru) [https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy](https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy).",
+      "sources": [
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy",
+          "title": "Стипендиальные программы",
+          "fetchedAt": "2026-10-05T14:59:58.266Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-huawei",
+          "title": "Стипендия HUAWEI",
+          "fetchedAt": "2026-09-07T17:26:48.920Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-pravitelstva-rf-po-prioritetnym",
+          "title": "Стипендия Правительства РФ по приоритетным направлениям во 2 семестре 2021/22 учебного года",
+          "fetchedAt": "2026-09-07T17:26:48.927Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-fonda-vladimira-potanina",
+          "title": "Стипендия фонда Владимира Потанина",
+          "fetchedAt": "2026-09-07T17:26:48.995Z"
+        },
+        {
+          "url": "https://kpfu.ru/itis/obuchenie-v-itis/stipendialnye-programmy/stipendiya-akademii-nauk-rt-na-vesenne-letnij",
+          "title": "Стипендия Академии наук РТ на весенне-летний семестр 2021/22 учебного года",
+          "fetchedAt": "2026-09-07T17:26:49.362Z"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,300 @@
+{
+  "firstRecordedAt": "2026-10-05T14:57:21.191Z",
+  "requests": {
+    "local": 26,
+    "cloud": 24
+  },
+  "totalCloudCostUSD": 0.0095623,
+  "language": [
+    {
+      "model": "Gemini 2.5 Flash",
+      "lang": "ru",
+      "n": 3,
+      "input": 76,
+      "output": 30.666666666666668,
+      "total": 106.66666666666667
+    },
+    {
+      "model": "Gemini 2.5 Flash",
+      "lang": "en",
+      "n": 3,
+      "input": 63,
+      "output": 26.333333333333332,
+      "total": 89.33333333333333
+    },
+    {
+      "model": "Qwen3.5:9b",
+      "lang": "ru",
+      "n": 3,
+      "input": 82.66666666666667,
+      "output": 33.333333333333336,
+      "total": 116
+    },
+    {
+      "model": "Qwen3.5:9b",
+      "lang": "en",
+      "n": 3,
+      "input": 75,
+      "output": 29.666666666666668,
+      "total": 104.66666666666667
+    }
+  ],
+  "temperatures": [
+    {
+      "model": "Gemini 2.5 Flash",
+      "temperature": 0,
+      "n": 3,
+      "input": 96,
+      "output": 44,
+      "minOutput": 42,
+      "maxOutput": 45,
+      "unique": 2,
+      "preservesFields": 3,
+      "lengthStops": 0
+    },
+    {
+      "model": "Gemini 2.5 Flash",
+      "temperature": 0.2,
+      "n": 3,
+      "input": 96,
+      "output": 45.333333333333336,
+      "minOutput": 45,
+      "maxOutput": 46,
+      "unique": 2,
+      "preservesFields": 3,
+      "lengthStops": 0
+    },
+    {
+      "model": "Gemini 2.5 Flash",
+      "temperature": 0.8,
+      "n": 3,
+      "input": 96,
+      "output": 48.333333333333336,
+      "minOutput": 48,
+      "maxOutput": 49,
+      "unique": 2,
+      "preservesFields": 3,
+      "lengthStops": 0
+    },
+    {
+      "model": "Gemini 2.5 Flash",
+      "temperature": 1.4,
+      "n": 3,
+      "input": 96,
+      "output": 48,
+      "minOutput": 44,
+      "maxOutput": 51,
+      "unique": 3,
+      "preservesFields": 3,
+      "lengthStops": 0
+    },
+    {
+      "model": "Qwen3.5:9b",
+      "temperature": 0,
+      "n": 3,
+      "input": 112,
+      "output": 52,
+      "minOutput": 52,
+      "maxOutput": 52,
+      "unique": 1,
+      "preservesFields": 3,
+      "lengthStops": 0
+    },
+    {
+      "model": "Qwen3.5:9b",
+      "temperature": 0.2,
+      "n": 3,
+      "input": 112,
+      "output": 52.333333333333336,
+      "minOutput": 52,
+      "maxOutput": 53,
+      "unique": 3,
+      "preservesFields": 3,
+      "lengthStops": 0
+    },
+    {
+      "model": "Qwen3.5:9b",
+      "temperature": 0.8,
+      "n": 3,
+      "input": 112,
+      "output": 57.666666666666664,
+      "minOutput": 50,
+      "maxOutput": 68,
+      "unique": 3,
+      "preservesFields": 3,
+      "lengthStops": 0
+    },
+    {
+      "model": "Qwen3.5:9b",
+      "temperature": 1.4,
+      "n": 3,
+      "input": 112,
+      "output": 180,
+      "minOutput": 180,
+      "maxOutput": 180,
+      "unique": 3,
+      "preservesFields": 1,
+      "lengthStops": 3
+    }
+  ],
+  "context": [
+    {
+      "id": "lines20-ctx16384",
+      "lines": 20,
+      "numCtx": 16384,
+      "input": 432,
+      "output": 43,
+      "correct": 3,
+      "validJSON": true,
+      "answer": "{\n  \"begin\": \"714693\",\n  \"middle\": \"583027\",\n  \"end\": \"926481\"\n}",
+      "seconds": 7.497
+    },
+    {
+      "id": "lines20-ctx2048",
+      "lines": 20,
+      "numCtx": 2048,
+      "input": 432,
+      "output": 43,
+      "correct": 3,
+      "validJSON": true,
+      "answer": "{\n  \"begin\": \"714693\",\n  \"middle\": \"583027\",\n  \"end\": \"926481\"\n}",
+      "seconds": 6.751
+    },
+    {
+      "id": "lines100-ctx16384",
+      "lines": 100,
+      "numCtx": 16384,
+      "input": 1792,
+      "output": 43,
+      "correct": 3,
+      "validJSON": true,
+      "answer": "{\n  \"begin\": \"714693\",\n  \"middle\": \"583027\",\n  \"end\": \"926481\"\n}",
+      "seconds": 11.691
+    },
+    {
+      "id": "lines100-ctx2048",
+      "lines": 100,
+      "numCtx": 2048,
+      "input": 1792,
+      "output": 43,
+      "correct": 3,
+      "validJSON": true,
+      "answer": "{\n  \"begin\": \"714693\",\n  \"middle\": \"583027\",\n  \"end\": \"926481\"\n}",
+      "seconds": 11.48
+    },
+    {
+      "id": "lines240-ctx16384",
+      "lines": 240,
+      "numCtx": 16384,
+      "input": 4172,
+      "output": 43,
+      "correct": 3,
+      "validJSON": true,
+      "answer": "{\n  \"begin\": \"714693\",\n  \"middle\": \"583027\",\n  \"end\": \"926481\"\n}",
+      "seconds": 20.344
+    },
+    {
+      "id": "lines240-ctx2048",
+      "lines": 240,
+      "numCtx": 2048,
+      "input": 2048,
+      "output": 38,
+      "correct": 1,
+      "validJSON": false,
+      "answer": "{\n  \"begin\": 0183,\n  \"middle\": 0238,\n  \"end\": 926481\n}",
+      "seconds": 16.08
+    },
+    {
+      "id": "lines450-ctx16384",
+      "lines": 450,
+      "numCtx": 16384,
+      "input": 7742,
+      "output": 43,
+      "correct": 3,
+      "validJSON": true,
+      "answer": "{\n  \"begin\": \"714693\",\n  \"middle\": \"583027\",\n  \"end\": \"926481\"\n}",
+      "seconds": 33.881
+    },
+    {
+      "id": "lines450-ctx2048",
+      "lines": 450,
+      "numCtx": 2048,
+      "input": 2048,
+      "output": 38,
+      "correct": 1,
+      "validJSON": false,
+      "answer": "{\n  \"begin\": 0393,\n  \"middle\": 0449,\n  \"end\": 926481\n}",
+      "seconds": 15.717
+    }
+  ],
+  "app": [
+    {
+      "session": 1,
+      "question": "Где находится ИТИС и как связаться с институтом?",
+      "calls": 2,
+      "input": 2801,
+      "output": 330,
+      "total": 3131,
+      "cost": 0.0016653000000000002,
+      "tools": [
+        "search_kfu"
+      ]
+    },
+    {
+      "session": 2,
+      "question": "Какие компании сотрудничают с ИТИС?",
+      "calls": 2,
+      "input": 2938,
+      "output": 333,
+      "total": 3271,
+      "cost": 0.0017139,
+      "tools": [
+        "search_kfu"
+      ]
+    },
+    {
+      "session": 3,
+      "question": "Какие стипендиальные программы доступны студентам ИТИС?",
+      "calls": 2,
+      "input": 3233,
+      "output": 1169,
+      "total": 4402,
+      "cost": 0.0038924,
+      "tools": [
+        "search_kfu"
+      ]
+    }
+  ],
+  "average": {
+    "input": 2990.6666666666665,
+    "output": 610.6666666666666,
+    "total": 3601.3333333333335,
+    "cost": 0.0024238666666666665
+  },
+  "scenarios": [
+    {
+      "name": "Редкое использование",
+      "questions": 3,
+      "scheduleShare": 0.8,
+      "llmQuestions": 0.5999999999999999,
+      "tokens": 2160.7999999999997,
+      "cost": 0.0014543199999999996
+    },
+    {
+      "name": "Базовый сценарий",
+      "questions": 5,
+      "scheduleShare": 0.6,
+      "llmQuestions": 2,
+      "tokens": 7202.666666666667,
+      "cost": 0.004847733333333333
+    },
+    {
+      "name": "Активное использование",
+      "questions": 10,
+      "scheduleShare": 0.3,
+      "llmQuestions": 7,
+      "tokens": 25209.333333333336,
+      "cost": 0.016967066666666666
+    }
+  ]
+}
