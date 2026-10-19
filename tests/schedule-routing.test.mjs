@@ -4,8 +4,9 @@ import {
   scheduleRequest,
   scheduleViaMcp,
 } from '../server/schedule-request.mjs';
-import { getGroupSchedule } from '../server/schedule.mjs';
-test('routes timetable and day follow-ups without an LLM, but not unrelated questions', () => {
+import { readFile } from 'node:fs/promises';
+import { scheduleResult } from '../server/schedule.mjs';
+void test('routes timetable and day follow-ups without an LLM, but not unrelated questions', () => {
   assert.deepEqual(
     scheduleRequest([
       { role: 'user', content: 'Покажи расписание 11-401 на завтра' },
@@ -31,8 +32,14 @@ test('routes timetable and day follow-ups without an LLM, but not unrelated ques
     day: '',
   });
 });
-test('bundled schedule works without any network and includes full week for UI filtering', async () => {
-  const result = await getGroupSchedule({
+void test('bundled schedule works without any network and includes full week for UI filtering', async () => {
+  const data = JSON.parse(
+    await readFile(
+      new URL('../server/data/timetable.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const result = scheduleResult(data, {
     group: '11-401',
     day: 'понедельник',
   });
@@ -42,7 +49,7 @@ test('bundled schedule works without any network and includes full week for UI f
   assert.ok(result.weekLessons.length > result.lessons.length);
   assert.ok(result.lessons.every((l) => l.day === 'понедельник'));
 });
-test('direct timetable route uses MCP and emits structured data for the card', async () => {
+void test('direct timetable route uses MCP and emits structured data for the card', async () => {
   const events = [];
   const data = {
     group: '11-401',

@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { searchKfu, readPage, indexStatus } from './knowledge.mjs';
-import { getGroupSchedule } from './schedule.mjs';
+import { getGroupSchedule, startScheduleRefresh } from './schedule.mjs';
 const server = new McpServer({ name: 'kfu-itis-knowledge', version: '1.0.0' });
 const result = (data) => ({
   content: [{ type: 'text', text: JSON.stringify(data) }],
@@ -97,3 +97,4 @@ server.registerResource(
   }),
 );
 await server.connect(new StdioServerTransport());
+startScheduleRefresh();

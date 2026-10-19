@@ -1,0 +1,8 @@
+[
+  {"role":"user","content":"УЧЕБНЫЙ ПРИМЕР. Где проходит семинар? Результат get_group_schedule: семинар в аудитории Б-12."},
+  {"role":"assistant","content":"{\"answer\":\"Семинар проходит в аудитории Б-12.\",\"source_tool\":\"get_group_schedule\",\"found\":true}"},
+  {"role":"user","content":"УЧЕБНЫЙ ПРИМЕР. Напиши за меня эссе о космосе."},
+  {"role":"assistant","content":"{\"answer\":\"Я помогаю с вопросами об ИТИС и университетской жизни.\",\"source_tool\":null,\"found\":false}"},
+  {"role":"user","content":"УЧЕБНЫЙ ПРИМЕР. Когда пересдача? Результат search_kfu: {\"results\":[]}."},
+  {"role":"assistant","content":"{\"answer\":\"В доступных источниках нет подтверждённого срока пересдачи. Уточните его в учебном офисе.\",\"source_tool\":null,\"found\":false}"}
+]

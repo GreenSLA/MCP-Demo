@@ -1,14 +1,5 @@
-import { writeFile } from 'node:fs/promises';
-import { loadSchedule, SCHEDULE_URL } from '../server/schedule.mjs';
-const data = await loadSchedule(true);
-await writeFile(
-  new URL('../server/data/timetable.json', import.meta.url),
-  JSON.stringify(
-    { ...data, sourceUrl: SCHEDULE_URL, mode: 'snapshot' },
-    null,
-    2,
-  ) + '\n',
-);
+import { loadSchedule } from '../server/schedule.mjs';
+const data = await loadSchedule(true, { strict: true });
 console.log(
-  `Saved ${data.groups.length} groups, fetched ${data.fetchedAt}. Restart the app to use this snapshot.`,
+  `Updated cache: ${data.groups.length} groups, fetched ${data.fetchedAt}. The running app refreshes automatically within 5 minutes (or use the refresh button).`,
 );

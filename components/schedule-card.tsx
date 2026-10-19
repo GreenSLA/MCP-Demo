@@ -1,5 +1,5 @@
 'use client';
-import { useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import {
   ArrowUpRight,
   CalendarDays,
@@ -21,6 +21,10 @@ export type ScheduleData = {
   url: string;
   fetchedAt: string;
   mode: 'snapshot' | 'live';
+  stale?: boolean;
+  refreshIntervalMs?: number;
+  refreshError?: string;
+  cacheError?: string;
   needsGroup?: boolean;
   availableGroups: string[];
   formattedAnswer: string;
@@ -56,6 +60,37 @@ export function ScheduleCard({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const id = useId();
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+  useEffect(() => {
+    const controller = new AbortController();
+    const timer = setInterval(() => {
+      if (document.hidden || busy) return;
+      void (async () => {
+        try {
+          const response = await fetch(
+            '/api/schedule?' + new URLSearchParams({ group: data.group || '' }),
+            { signal: controller.signal },
+          );
+          const next = (await response.json()) as ScheduleData & {
+            error?: string;
+          };
+          if (!response.ok)
+            throw new Error(next.error || 'Не удалось обновить расписание');
+          onChangeRef.current(next);
+          setError('');
+        } catch (e) {
+          if (!controller.signal.aborted) setError((e as Error).message);
+        }
+      })();
+    }, 60_000);
+    return () => {
+      clearInterval(timer);
+      controller.abort();
+    };
+  }, [data.group, busy]);
   async function load(group: string, refresh = false) {
     setBusy(true);
     setError('');
@@ -216,11 +251,12 @@ export function ScheduleCard({
         <div className="timetable-origin">
           <span
             className={
-              'status-dot' + (data.mode === 'snapshot' ? ' amber' : '')
+              'status-dot' +
+              (data.stale || data.mode === 'snapshot' ? ' amber' : '')
             }
           />
-          {data.mode === 'snapshot'
-            ? 'Сохранённая копия'
+          {data.stale || data.mode === 'snapshot'
+            ? 'Сохранённая копия · актуальность не подтверждена'
             : 'Загружено из Google Sheets'}{' '}
           ·{' '}
           {new Date(data.fetchedAt).toLocaleString('ru-RU', {
@@ -230,6 +266,13 @@ export function ScheduleCard({
           })}{' '}
           МСК
         </div>
+        {data.stale && (
+          <p aria-live="polite">
+            Не удалось получить свежее расписание. Показана последняя доступная
+            копия; приложение повторит попытку автоматически.
+          </p>
+        )}
+        {data.cacheError && <p aria-live="polite">{data.cacheError}</p>}
         <p>
           Условия по неделям, подгруппам и отменам сохранены в тексте пар. Для
           конкретной даты показан шаблон дня недели; чётность недели и каникулы

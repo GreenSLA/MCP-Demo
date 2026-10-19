@@ -89,7 +89,14 @@ test('agent dispatches MCP calls, preserves tool IDs and returns real source URL
         };
       }
       assert.equal(messages.at(-1).tool_call_id, 'call-1');
-      return { role: 'assistant', content: '[ИТИС](https://kpfu.ru/itis)' };
+      return {
+        role: 'assistant',
+        content: JSON.stringify({
+          answer: '[ИТИС](https://kpfu.ru/itis)',
+          source_tool: 'search_kfu',
+          found: true,
+        }),
+      };
     },
   });
   assert.equal(calls.length, 1);
@@ -115,7 +122,14 @@ test('failed MCP tool becomes an error observation, never a fabricated source', 
     signal: new AbortController().signal,
     complete: async () =>
       turn++
-        ? { role: 'assistant', content: 'Источник недоступен.' }
+        ? {
+            role: 'assistant',
+            content: JSON.stringify({
+              answer: 'Источник недоступен.',
+              source_tool: null,
+              found: false,
+            }),
+          }
         : {
             role: 'assistant',
             tool_calls: [

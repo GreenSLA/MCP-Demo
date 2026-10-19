@@ -1,6 +1,11 @@
 /** Read-only adapter for the user-supplied public ITIS timetable. */
 import ExcelJS from 'exceljs';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, rm } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
+import {
+  createScheduleCache,
+  DEFAULT_SCHEDULE_REFRESH_MS,
+} from './schedule-cache.mjs';
 export const SCHEDULE_ID = '12m_Ze1NOnVvdVuSDY5bj0v4r24xLY5RhtuBxNjS26yQ';
 export const SCHEDULE_URL = `https://docs.google.com/spreadsheets/d/${SCHEDULE_ID}/edit`;
 const DAYS = [
@@ -12,8 +17,6 @@ const DAYS = [
   'суббота',
   'воскресенье',
 ];
-let cached;
-let pending;
 // ExcelJS can nest rich text inside a hyperlink's `text` property.
 // String(cell.text) would stringify that object instead of its visible runs.
 export function cellValueText(value) {
@@ -129,51 +132,70 @@ export function resolveDay(value = '', now = new Date()) {
     throw new Error('Укажи день недели, сегодня, завтра или дату ГГГГ-ММ-ДД.');
   return { day };
 }
-export async function loadSchedule(refresh = false) {
-  if (!refresh && !cached) {
-    cached = JSON.parse(
-      await readFile(new URL('./data/timetable.json', import.meta.url), 'utf8'),
-    );
+export async function downloadSchedule(fetchImpl = fetch) {
+  const response = await fetchImpl(
+    `https://docs.google.com/spreadsheets/d/${SCHEDULE_ID}/export?format=xlsx`,
+    { signal: AbortSignal.timeout(35000), cache: 'no-store' },
+  );
+  if (!response.ok)
+    throw new Error(`Google Sheets вернул HTTP ${response.status}.`);
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > 15_000_000) {
+      await reader.cancel();
+      throw new Error('Таблица слишком большая.');
+    }
+    chunks.push(value);
   }
-  if (!refresh && cached?.mode === 'snapshot') return cached;
-  if (!refresh && cached && Date.now() - Date.parse(cached.fetchedAt) < 120000)
-    return cached;
-  if (!pending)
-    pending = (async () => {
-      const response = await fetch(
-        `https://docs.google.com/spreadsheets/d/${SCHEDULE_ID}/export?format=xlsx`,
-        { signal: AbortSignal.timeout(35000) },
-      );
-      if (!response.ok)
-        throw new Error(`Google Sheets вернул HTTP ${response.status}.`);
-      const reader = response.body.getReader();
-      const chunks = [];
-      let size = 0;
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        size += value.length;
-        if (size > 15_000_000) {
-          await reader.cancel();
-          throw new Error('Таблица слишком большая.');
-        }
-        chunks.push(value);
-      }
-      const workbook = new ExcelJS.Workbook();
-      await workbook.xlsx.load(Buffer.concat(chunks));
-      cached = {
-        groups: parseSchedule(workbook),
-        mode: 'live',
-        fetchedAt: new Date().toISOString(),
-      };
-      return cached;
-    })().finally(() => {
-      pending = null;
-    });
-  return pending;
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(Buffer.concat(chunks));
+  return {
+    groups: parseSchedule(workbook),
+    mode: 'live',
+    fetchedAt: new Date().toISOString(),
+    sourceUrl: SCHEDULE_URL,
+  };
 }
+
+const cacheFile = new URL('../data/timetable-cache.json', import.meta.url);
+async function persistSchedule(data) {
+  await mkdir(new URL('../data/', import.meta.url), { recursive: true });
+  const temporary = new URL(
+    `../data/timetable-${randomUUID()}.tmp`,
+    import.meta.url,
+  );
+  try {
+    await writeFile(temporary, JSON.stringify(data) + '\n');
+    await rename(temporary, cacheFile);
+  } finally {
+    await rm(temporary, { force: true });
+  }
+}
+const scheduleCache = createScheduleCache({
+  download: downloadSchedule,
+  readCache: async () => JSON.parse(await readFile(cacheFile, 'utf8')),
+  readFallback: async () =>
+    JSON.parse(
+      await readFile(new URL('./data/timetable.json', import.meta.url), 'utf8'),
+    ),
+  writeCache: persistSchedule,
+  refreshIntervalMs:
+    process.env.SCHEDULE_REFRESH_INTERVAL_MS === undefined
+      ? DEFAULT_SCHEDULE_REFRESH_MS
+      : Number(process.env.SCHEDULE_REFRESH_INTERVAL_MS),
+  // stdout belongs to JSON-RPC when this module runs inside the MCP server.
+  onError: (e) => console.error('[schedule]', e.message),
+});
+export const loadSchedule = (refresh = false, options) =>
+  scheduleCache.load(refresh, options);
+export const startScheduleRefresh = () => scheduleCache.start();
 function plainMarkdown(value) {
-  return value.replace(/[\\`*_\[\]<>#]/g, '\\$&');
+  return value.replace(/[\\`*_[\]<>#]/g, '\\$&');
 }
 export function scheduleResult(data, { group = '', day = '' } = {}) {
   const requested = normalizeGroup(group);
@@ -183,6 +205,10 @@ export function scheduleResult(data, { group = '', day = '' } = {}) {
     title: 'Расписание ИТИС · Google Sheets',
     fetchedAt: data.fetchedAt,
     mode: data.mode || 'snapshot',
+    stale: data.stale ?? data.mode !== 'live',
+    refreshIntervalMs: data.refreshIntervalMs,
+    refreshError: data.refreshError,
+    cacheError: data.cacheError,
     availableGroups: data.groups.map((g) => g.label),
   };
   if (!requested || !data.groups.some((g) => g.group === requested))
@@ -210,11 +236,12 @@ export function scheduleResult(data, { group = '', day = '' } = {}) {
     (l) => !filter.day || l.day === filter.day,
   );
   const warnings = [
-    ...(data.mode !== 'live'
+    ...(base.stale
       ? [
-          'Показана сохранённая копия расписания. Дата получения указана рядом с источником; изменения после этой даты в неё не включены.',
+          'Показана последняя сохранённая копия расписания: актуальность не удалось подтвердить. Дата последней успешной загрузки указана рядом с источником.',
         ]
       : []),
+    ...(data.cacheError ? [data.cacheError] : []),
     'Пометки о неделях, датах, подгруппах и дисциплинах по выбору сохранены из таблицы. Применимость к конкретной учебной неделе автоматически не определяется.',
   ];
   if (filter.date)
