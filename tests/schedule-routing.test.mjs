@@ -31,6 +31,13 @@ void test('routes timetable and day follow-ups without an LLM, but not unrelated
     group: '',
     day: '',
   });
+  assert.deepEqual(
+    scheduleRequest(
+      [{ role: 'user', content: 'Какие у меня пары?' }],
+      '11-401',
+    ),
+    { group: '11-401', day: '' },
+  );
 });
 void test('bundled schedule works without any network and includes full week for UI filtering', async () => {
   const data = JSON.parse(

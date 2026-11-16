@@ -1,13 +1,13 @@
 import { normalizeGroup } from './schedule.mjs';
 /** Cheap routing for timetable queries: works without LLM credentials. */
-export function scheduleRequest(history) {
+export function scheduleRequest(history, savedGroup = '') {
   const current = history.at(-1)?.content || '';
   const recent = history.slice(-4);
   const inSchedule = recent
     .slice(0, -1)
     .some((m) => /расписан|пары|занятия группы/i.test(m.content));
   const explicit =
-    /расписан|\bпар[а-я]*\b|какие пары|когда пары|какие занятия/iu.test(
+    /расписан|(?<!\p{L})пар(?:а|ы|у|е|ой)?(?!\p{L})|какие занятия/iu.test(
       current,
     );
   const group = normalizeGroup(current);
@@ -40,16 +40,16 @@ export function scheduleRequest(history) {
     .map((m) => normalizeGroup(m.content))
     .find(Boolean);
   return {
-    group: group || (inSchedule ? previous : '') || '',
+    group: group || (inSchedule ? previous : '') || savedGroup || '',
     day: wholeWeek ? '' : relative || date || weekday || '',
   };
 }
-export async function scheduleViaMcp(mcp, args, emit) {
+export async function scheduleViaMcp(mcp, args, emit, signal) {
   emit({ type: 'status', message: 'Открываю расписание группы…' });
   const result = await mcp.client.callTool(
     { name: 'get_group_schedule', arguments: args },
     undefined,
-    { timeout: 60000 },
+    { timeout: 60000, ...(signal ? { signal } : {}) },
   );
   const data = JSON.parse(
     result.content

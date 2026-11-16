@@ -1,13 +1,33 @@
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { localPostgres } from './local-postgres.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const children = [];
+const database = await localPostgres(root);
 let stopping = false;
-function stop(code = 0) {
+async function stop(code = 0) {
   if (stopping) return;
   stopping = true;
-  for (const p of children) p.kill('SIGTERM');
-  setTimeout(() => process.exit(code), 700);
+  await Promise.all(
+    children.map(
+      (child) =>
+        new Promise((resolve) => {
+          if (child.exitCode !== null || child.signalCode !== null)
+            return resolve();
+          const timeout = setTimeout(resolve, 3000);
+          child.once('exit', () => {
+            clearTimeout(timeout);
+            resolve();
+          });
+          child.kill('SIGTERM');
+        }),
+    ),
+  );
+  try {
+    await database?.stop();
+  } finally {
+    process.exit(code);
+  }
 }
 for (const args of [
   ['server/api.mjs'],

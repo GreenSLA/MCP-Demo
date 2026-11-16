@@ -96,13 +96,19 @@ export function createScheduleCache({
     }
   }
 
-  async function load(force = false, { strict = false } = {}) {
+  async function load(
+    force = false,
+    { strict = false, cacheOnly = false } = {},
+  ) {
     await initialize();
     const stale =
       !cached ||
       cached.mode !== 'live' ||
       now() - Date.parse(cached.fetchedAt) >= refreshIntervalMs;
-    if (force || pending || ((stale || lastError) && now() >= nextAttemptAt)) {
+    if (
+      !cacheOnly &&
+      (force || pending || ((stale || lastError) && now() >= nextAttemptAt))
+    ) {
       if (!pending)
         pending = refresh().finally(() => {
           pending = undefined;

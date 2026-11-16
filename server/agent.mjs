@@ -1,7 +1,23 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { loadPrompts, ask } from './answer.mjs';
+import { safeUrl } from './knowledge.mjs';
+import {
+  authorizeAgentTool,
+  isAgentTool,
+  roleAllowsTool,
+  stripPromptOverrides,
+  untrustedObservation,
+  validatePublicAnswer,
+} from './security.mjs';
+
+const securityPrompt = readFileSync(
+  new URL('../prompts/system_v5.md', import.meta.url),
+  'utf8',
+).trim();
+const maxToolCalls = 4;
 
 export async function connectMcp() {
   const client = new Client({ name: 'itis-navigator-agent', version: '1.0.0' });
@@ -9,6 +25,9 @@ export async function connectMcp() {
     command: process.execPath,
     args: [fileURLToPath(new URL('./mcp-server.mjs', import.meta.url))],
     stderr: 'inherit',
+    env: process.env.DATABASE_URL
+      ? { DATABASE_URL: process.env.DATABASE_URL }
+      : undefined,
   });
   await client.connect(transport);
   const { tools } = await client.listTools();
@@ -25,7 +44,7 @@ export async function connectMcp() {
   };
 }
 export function systemPrompt() {
-  return loadPrompts().system;
+  return loadPrompts().system + '\n\n' + securityPrompt;
 }
 export async function completion({
   key,
@@ -86,15 +105,29 @@ export async function runAgent({
   key,
   model,
   history,
+  memory = '',
+  role = 'student',
   emit,
   signal,
+  audit = () => {},
   complete = completion,
 }) {
   const prompts = loadPrompts();
+  const system = prompts.system + '\n\n' + securityPrompt;
+  const tools = mcp.tools.filter((tool) =>
+    roleAllowsTool(role, tool.function.name),
+  );
   const messages = [
-    { role: 'system', content: prompts.system },
+    { role: 'system', content: system },
     ...prompts.examples,
-    ...history,
+    ...(memory
+      ? [{ role: 'assistant', content: untrustedObservation(memory, 'memory') }]
+      : []),
+    ...history.map((message) =>
+      message.role === 'assistant'
+        ? { ...message, content: stripPromptOverrides(message.content) }
+        : message,
+    ),
   ];
   const successfulTools = new Set();
   const currentQuestion =
@@ -107,14 +140,17 @@ export async function runAgent({
       history.slice(-3).some((m) => /расписан|пары/i.test(m.content)));
   const firstTool =
     scheduleIntent &&
-    mcp.tools.some((t) => t.function.name === 'get_group_schedule')
+    tools.some((t) => t.function.name === 'get_group_schedule')
       ? 'get_group_schedule'
-      : 'search_kfu';
+      : tools.some((t) => t.function.name === 'search_docs')
+        ? 'search_docs'
+        : 'search_kfu';
   const sources = new Map();
+  const sourceUrls = new Set();
   let totalCalls = 0;
   for (let turn = 0; turn < 6; turn++) {
     signal.throwIfAborted();
-    const last = turn === 5 || totalCalls >= 8;
+    const last = turn === 5 || totalCalls >= maxToolCalls;
     emit({
       type: 'status',
       message:
@@ -128,7 +164,7 @@ export async function runAgent({
       key,
       model,
       messages,
-      tools: mcp.tools,
+      tools,
       toolChoice: last
         ? 'none'
         : turn === 0
@@ -142,8 +178,10 @@ export async function runAgent({
         messages: messages.slice(0, -1),
         initialMessage: msg,
         successfulTools: [...successfulTools],
+        validatePublic: (text) =>
+          validatePublicAnswer(text, system, sourceUrls),
         signal,
-        complete: (args) => complete({ key, model, tools: mcp.tools, ...args }),
+        complete: (args) => complete({ key, model, tools, ...args }),
         onAttempt: (attempt) => {
           if (!attempt.valid)
             emit({ type: 'status', message: 'Проверяю формат ответа…' });
@@ -164,27 +202,43 @@ export async function runAgent({
       let args = {},
         data = {},
         failed = false;
+      let authorized = false;
+      const name = call.function.name;
       try {
-        args = JSON.parse(call.function.arguments || '{}');
-        if (totalCalls > 8 || last)
+        if (totalCalls > maxToolCalls || last)
           throw new Error(
             'Достигнут лимит инструментов. Сформулируй ответ по уже полученным данным.',
           );
-        if (!mcp.tools.some((t) => t.function.name === call.function.name))
+        if (!tools.some((t) => t.function.name === name))
           throw new Error('Неизвестный инструмент.');
+        args = authorizeAgentTool(
+          name,
+          JSON.parse(call.function.arguments || '{}'),
+          role,
+        );
+        authorized = true;
+        await audit({
+          tool: name,
+          decision: 'allow',
+          channel: 'agent',
+          count: totalCalls,
+          args,
+        });
         emit({
           type: 'status',
           message:
             call.function.name === 'get_group_schedule'
               ? 'Читаю расписание группы из Google Sheets…'
-              : call.function.name === 'search_kfu'
-                ? 'Ищу на официальных страницах КФУ…'
-                : 'Читаю найденную страницу…',
+              : name === 'search_docs'
+                ? 'Ищу по текстовым документам ИТИС…'
+                : call.function.name === 'search_kfu'
+                  ? 'Ищу на официальных страницах КФУ…'
+                  : 'Читаю найденную страницу…',
         });
         const result = await mcp.client.callTool(
           { name: call.function.name, arguments: args },
           undefined,
-          { timeout: 120000 },
+          { timeout: 120000, signal },
         );
         data = JSON.parse(
           result.content
@@ -198,22 +252,47 @@ export async function runAgent({
           (data.results?.length || data.text?.trim() || data.lessons?.length)
         )
           successfulTools.add(call.function.name);
+        if (!failed && name !== 'get_group_schedule')
+          for (const link of data.links || []) {
+            try {
+              sourceUrls.add(safeUrl(link.url));
+            } catch {
+              /* Ignore non-KFU links. */
+            }
+          }
         if (!failed)
           for (const p of data.results || (data.url ? [data] : [])) {
-            sources.set(p.url, {
-              url: p.url,
+            let url = p.url;
+            if (name !== 'get_group_schedule') {
+              try {
+                url = safeUrl(p.url);
+              } catch {
+                continue;
+              }
+              sourceUrls.add(url);
+            }
+            sources.set(url, {
+              url,
               title: p.title,
               fetchedAt: p.fetchedAt,
+              version: p.version,
             });
           }
       } catch (e) {
+        if (!authorized)
+          await audit({
+            tool: name,
+            decision: 'deny',
+            channel: 'agent',
+            count: totalCalls,
+          });
         failed = true;
         data = { error: e.message };
       }
       emit({
         type: 'tool',
         step: {
-          name: call.function.name,
+          name: isAgentTool(name) ? name : 'unknown',
           arguments: args,
           status: failed ? 'error' : 'done',
           detail: failed
@@ -221,7 +300,7 @@ export async function runAgent({
             : data.lessons
               ? `${data.lessons.length} занятий · группа ${data.group}`
               : data.results
-                ? `${data.results.length} результатов · ${data.indexedPages} страниц в корпусе`
+                ? data.results.length + ' результатов'
                 : `${data.text?.length || 0} символов прочитано`,
         },
       });
@@ -242,7 +321,10 @@ export async function runAgent({
       messages.push({
         role: 'tool',
         tool_call_id: call.id,
-        content: JSON.stringify(data),
+        content: untrustedObservation(
+          data,
+          name === 'search_docs' ? 'doc' : 'tool',
+        ),
       });
     }
   }

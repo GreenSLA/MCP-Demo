@@ -5,7 +5,13 @@ export const AnswerSchema = z
   .object({
     answer: z.string().trim().min(1).max(4000),
     source_tool: z
-      .enum(['search_kfu', 'read_kfu_page', 'get_group_schedule'])
+      .enum([
+        'search_docs',
+        'search_kfu',
+        'read_kfu_page',
+        'get_group_schedule',
+        'deadlines',
+      ])
       .nullable(),
     found: z.boolean(),
   })
@@ -24,7 +30,14 @@ export const answerResponseFormat = {
         answer: { type: 'string' },
         source_tool: {
           type: ['string', 'null'],
-          enum: ['search_kfu', 'read_kfu_page', 'get_group_schedule', null],
+          enum: [
+            'search_docs',
+            'search_kfu',
+            'read_kfu_page',
+            'get_group_schedule',
+            'deadlines',
+            null,
+          ],
         },
         found: { type: 'boolean' },
       },
@@ -94,6 +107,7 @@ export async function ask({
   complete,
   initialMessage,
   successfulTools = [],
+  validatePublic = () => {},
   onAttempt = () => {},
   signal,
 }) {
@@ -111,6 +125,7 @@ export async function ask({
           });
     try {
       const answer = validateAnswer(msg.content, { successfulTools });
+      validatePublic(answer.answer);
       onAttempt({ attempt, valid: true, raw: msg.content });
       return { answer, attempts: attempt + 1, fallback: false };
     } catch (e) {

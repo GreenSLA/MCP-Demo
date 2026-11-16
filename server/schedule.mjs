@@ -274,5 +274,8 @@ export function scheduleResult(data, { group = '', day = '' } = {}) {
   };
 }
 export async function getGroupSchedule(args) {
-  return scheduleResult(await loadSchedule(args.refresh), args);
+  return scheduleResult(
+    await loadSchedule(args.refresh, { cacheOnly: args.cacheOnly }),
+    args,
+  );
 }

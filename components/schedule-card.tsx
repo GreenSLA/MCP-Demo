@@ -29,6 +29,7 @@ export type ScheduleData = {
   availableGroups: string[];
   formattedAnswer: string;
   warnings?: string[];
+  manualRefreshLimited?: boolean;
   lessons?: Lesson[];
   weekLessons?: Lesson[];
 };
@@ -52,9 +53,15 @@ const days = [
 export function ScheduleCard({
   data,
   onChange,
+  sessionId,
+  messageId,
+  live = true,
 }: {
   data: ScheduleData;
   onChange: (data: ScheduleData) => void;
+  sessionId?: string;
+  messageId?: string;
+  live?: boolean;
 }) {
   const [day, setDay] = useState(data.day || 'all');
   const [busy, setBusy] = useState(false);
@@ -65,6 +72,7 @@ export function ScheduleCard({
     onChangeRef.current = onChange;
   }, [onChange]);
   useEffect(() => {
+    if (!live) return;
     const controller = new AbortController();
     const timer = setInterval(() => {
       if (document.hidden || busy) return;
@@ -90,19 +98,26 @@ export function ScheduleCard({
       clearInterval(timer);
       controller.abort();
     };
-  }, [data.group, busy]);
+  }, [data.group, busy, live]);
   async function load(group: string, refresh = false) {
     setBusy(true);
     setError('');
     try {
-      const r = await fetch(
-        '/api/schedule?' +
-          new URLSearchParams({ group, refresh: String(refresh) }),
-      );
+      const r = await fetch('/api/schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          group,
+          refresh,
+          ...(sessionId && messageId ? { sessionId, messageId } : {}),
+        }),
+      });
       const next = (await r.json()) as ScheduleData & { error?: string };
       if (!r.ok)
         throw new Error(next.error || 'Не удалось загрузить расписание');
       onChange(next);
+      if (next.manualRefreshLimited)
+        setError('Ручное обновление уже использовано сегодня.');
     } catch (e) {
       setError((e as Error).message);
     } finally {

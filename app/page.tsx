@@ -32,11 +32,15 @@ type Step = {
   detail?: string;
 };
 type Message = {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
   sources?: Source[];
   schedule?: ScheduleData;
+  confirmationId?: string;
 };
+type User = { id: string; username: string };
+type Session = { id: string; title: string };
 type Status = {
   configured: boolean;
   model: string;
@@ -66,7 +70,45 @@ const suggestions = [
     icon: Search,
   },
 ];
+function universityLink(value: string) {
+  try {
+    const url = new URL(value);
+    if (
+      url.protocol === 'https:' &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      (url.hostname === 'kpfu.ru' || url.hostname.endsWith('.kpfu.ru'))
+    )
+      return url.href;
+  } catch {
+    // Relative URLs and malformed links are not citations.
+  }
+  return '';
+}
+async function api<T>(path: string, method = 'GET', body?: object): Promise<T> {
+  const response = await fetch(path, {
+    method,
+    ...(body
+      ? {
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        }
+      : {}),
+  });
+  const data = await response.json();
+  if (!response.ok)
+    throw new Error((data as { error?: string }).error || 'Ошибка сервера.');
+  return data as T;
+}
 export default function Home() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authPending, setAuthPending] = useState(true);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessionId, setSessionId] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
@@ -81,6 +123,73 @@ export default function Home() {
   const [phase, setPhase] = useState('');
   const end = useRef<HTMLDivElement>(null);
   const controller = useRef<AbortController | null>(null);
+  const initialized = useRef(false);
+  async function sessionList() {
+    const data = await api<{ sessions: Session[] }>('/api/sessions');
+    setSessions(data.sessions);
+    return data.sessions;
+  }
+  function setSession(session: Session, history: Message[]) {
+    setSessionId(session.id);
+    sessionStorage.setItem('itis-dialog', session.id);
+    setMessages(history);
+    setSources(history.at(-1)?.sources || []);
+    setSteps([]);
+  }
+  async function openSession(id: string) {
+    const data = await api<{ session: Session; messages: Message[] }>(
+      '/api/sessions/' + id,
+    );
+    setSession(data.session, data.messages);
+  }
+  async function newSession() {
+    const { session } = await api<{ session: Session }>(
+      '/api/sessions',
+      'POST',
+      {},
+    );
+    setSessions((previous) => [session, ...previous]);
+    setSession(session, []);
+  }
+  async function openAccount(account: User) {
+    const list = await sessionList();
+    const remembered = sessionStorage.getItem('itis-dialog');
+    const first = list.find((session) => session.id === remembered) || list[0];
+    if (first) await openSession(first.id);
+    else await newSession();
+    setUser(account);
+  }
+  function report(e: unknown) {
+    setError((e as Error).message);
+  }
+  async function authenticate(register: boolean) {
+    setAuthBusy(true);
+    setError('');
+    try {
+      const { user: account } = await api<{ user: User }>(
+        register ? '/api/register' : '/api/login',
+        'POST',
+        { username, password },
+      );
+      setPassword('');
+      await openAccount(account);
+      await refresh();
+    } catch (e) {
+      report(e);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+  async function logout() {
+    await api('/api/logout', 'POST', {});
+    sessionStorage.removeItem('itis-dialog');
+    setUser(null);
+    setSessionId('');
+    setSessions([]);
+    setMessages([]);
+    setError('');
+    setSettings(false);
+  }
   async function refresh() {
     try {
       const r = await fetch('/api/status');
@@ -95,7 +204,22 @@ export default function Home() {
     }
   }
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
     void refresh();
+    void (async () => {
+      try {
+        const response = await fetch('/api/me');
+        if (response.status === 401) return;
+        if (!response.ok) throw new Error('Не удалось проверить вход.');
+        const { user: account } = (await response.json()) as { user: User };
+        await openAccount(account);
+      } catch (e) {
+        report(e);
+      } finally {
+        setAuthPending(false);
+      }
+    })();
   }, []);
   useEffect(() => {
     end.current?.scrollIntoView({ behavior: 'smooth' });
@@ -120,13 +244,11 @@ export default function Home() {
       setSaving(false);
     }
   }
-  async function ask(text = question) {
-    if (!text.trim() || busy) return;
-    const history = [
-      ...messages,
-      { role: 'user' as const, content: text.trim() },
-    ];
-    setMessages(history);
+  async function ask(
+    text = question,
+    confirmationId = messages.at(-1)?.confirmationId,
+  ) {
+    if (!text.trim() || busy || !sessionId) return;
     setQuestion('');
     setBusy(true);
     setSteps([]);
@@ -139,14 +261,9 @@ export default function Home() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: history
-            .slice(-16)
-            .map(({ role, content, schedule }) => ({
-              role,
-              content: schedule
-                ? `Расписание группы ${schedule.group || 'не выбрана'}, день: ${schedule.day || 'неделя'}`
-                : content.slice(0, 9000),
-            })),
+          sessionId,
+          question: text.trim(),
+          confirmationId,
         }),
         signal: controller.current.signal,
       });
@@ -166,6 +283,15 @@ export default function Home() {
         for (const line of lines) {
           if (!line.trim()) continue;
           const event = JSON.parse(line);
+          if (event.type === 'question')
+            setMessages((prev) => [
+              ...prev,
+              { id: event.id, role: 'user', content: text.trim() },
+            ]);
+          if (event.type === 'reset') {
+            setSession(event.session, [event.message]);
+            setSessions([event.session]);
+          }
           if (event.type === 'status') setPhase(event.message);
           if (event.type === 'tool') setSteps((prev) => [...prev, event.step]);
           if (event.type === 'sources') setSources(event.sources);
@@ -174,9 +300,11 @@ export default function Home() {
               ...prev,
               {
                 role: 'assistant',
+                id: event.id,
                 content: event.content,
                 sources: event.sources,
                 schedule: event.schedule,
+                confirmationId: event.confirmationId,
               },
             ]);
             setSources(event.sources);
@@ -194,8 +322,67 @@ export default function Home() {
       setBusy(false);
       setPhase('');
       void refresh();
+      void sessionList().catch(() => {});
     }
   }
+  if (!user)
+    return (
+      <main className="auth-shell">
+        <section
+          className="settings-card auth-card"
+          aria-label="Вход в ИТИС Навигатор"
+        >
+          <h1>ИТИС Навигатор</h1>
+          {authPending ? (
+            <p>Проверяю вход…</p>
+          ) : (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void authenticate(false);
+              }}
+            >
+              <label htmlFor="itis-username">Логин</label>
+              <Input
+                id="itis-username"
+                autoComplete="username"
+                value={username}
+                placeholder="Например, student"
+                onChange={(e) => setUsername(e.target.value)}
+                required
+              />
+              <label htmlFor="itis-password">Пароль</label>
+              <Input
+                id="itis-password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="account-actions">
+                <Button type="submit" disabled={authBusy}>
+                  Войти
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={authBusy || !username || !password}
+                  onClick={() => void authenticate(true)}
+                >
+                  Создать аккаунт
+                </Button>
+              </div>
+            </form>
+          )}
+        </section>
+      </main>
+    );
   return (
     <div className="workspace">
       <aside className="identity-panel">
@@ -217,14 +404,39 @@ export default function Home() {
           variant="outline"
           disabled={busy}
           onClick={() => {
-            setMessages([]);
-            setSources([]);
-            setSteps([]);
             setError('');
+            void newSession().catch(report);
           }}
         >
           <Plus size={17} /> Новый диалог
         </Button>
+        <div className="account-history">
+          <label htmlFor="itis-dialogs">Мои диалоги</label>
+          <NativeSelect
+            id="itis-dialogs"
+            value={sessionId}
+            disabled={busy}
+            onChange={(e) => {
+              setError('');
+              void openSession(e.target.value).catch(report);
+            }}
+          >
+            {sessions.map((session) => (
+              <NativeSelectOption key={session.id} value={session.id}>
+                {session.title}
+              </NativeSelectOption>
+            ))}
+          </NativeSelect>
+          <span>{user.username}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => void logout().catch(report)}
+          >
+            Выйти
+          </Button>
+        </div>
         <div className="side-label">ПОД РУКОЙ</div>
         <a
           className="side-link"
@@ -270,7 +482,9 @@ export default function Home() {
             <span
               className={status?.configured ? 'status-dot' : 'status-dot amber'}
             />
-            {status?.configured ? 'OpenRouter подключён' : 'Нужен API-ключ'}
+            {status?.configured
+              ? 'OpenRouter подключён'
+              : 'OpenRouter не подключён'}
           </button>
         </header>
         {settings && (
@@ -380,6 +594,9 @@ export default function Home() {
                     {m.schedule ? (
                       <ScheduleCard
                         data={m.schedule}
+                        sessionId={sessionId}
+                        messageId={m.id}
+                        live={i === messages.length - 1}
                         onChange={(data) =>
                           setMessages((prev) =>
                             prev.map((msg, index) =>
@@ -396,18 +613,42 @@ export default function Home() {
                       />
                     ) : (
                       <ReactMarkdown
+                        urlTransform={universityLink}
                         components={{
-                          a: ({ href, children }) => (
-                            <a href={href} target="_blank" rel="noreferrer">
-                              {children}
-                            </a>
-                          ),
+                          img: () => null,
+                          a: ({ href, children }) =>
+                            href ? (
+                              <a href={href} target="_blank" rel="noreferrer">
+                                {children}
+                              </a>
+                            ) : (
+                              children
+                            ),
                         }}
                       >
                         {m.content}
                       </ReactMarkdown>
                     )}
                   </div>
+                  {m.confirmationId && i === messages.length - 1 && (
+                    <div className="account-actions">
+                      <Button
+                        size="sm"
+                        disabled={busy}
+                        onClick={() => void ask('Да', m.confirmationId)}
+                      >
+                        Да
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy}
+                        onClick={() => void ask('Нет', m.confirmationId)}
+                      >
+                        Нет
+                      </Button>
+                    </div>
+                  )}
                   {!m.schedule && m.sources && m.sources.length > 0 && (
                     <div className="answer-sources">
                       {m.sources.slice(0, 5).map((s, i) => (
@@ -520,11 +761,13 @@ export default function Home() {
                   <strong>
                     {s.name === 'get_group_schedule'
                       ? 'Расписание группы'
-                      : s.name === 'search_kfu'
-                        ? 'Поиск по КФУ'
-                        : s.name === 'read_kfu_page'
-                          ? 'Чтение страницы'
-                          : s.name}
+                      : s.name === 'search_docs'
+                        ? 'Поиск по документам'
+                        : s.name === 'search_kfu'
+                          ? 'Поиск по КФУ'
+                          : s.name === 'read_kfu_page'
+                            ? 'Чтение страницы'
+                            : s.name}
                   </strong>
                   <p>
                     {String(

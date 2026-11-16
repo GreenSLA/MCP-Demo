@@ -4,6 +4,8 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { searchKfu, readPage, indexStatus } from './knowledge.mjs';
 import { getGroupSchedule, startScheduleRefresh } from './schedule.mjs';
+import { createStore } from './db.mjs';
+import { searchDocs } from './documents.mjs';
 const server = new McpServer({ name: 'kfu-itis-knowledge', version: '1.0.0' });
 const result = (data) => ({
   content: [{ type: 'text', text: JSON.stringify(data) }],
@@ -15,6 +17,32 @@ const wrap = (fn) => async (args) => {
     return { ...result({ error: e.message }), isError: true };
   }
 };
+const documents = process.env.DATABASE_URL ? createStore() : null;
+if (documents)
+  server.registerTool(
+    'search_docs',
+    {
+      description:
+        'Ищет в одобренных текстовых материалах ИТИС в PostgreSQL. Возвращает выдержки, версию, период действия и ссылки. Не подменяй неизвестные сроки по старым документам.',
+      inputSchema: {
+        query: z.string().min(2).max(500),
+        limit: z.number().int().min(1).max(6).default(3),
+      },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    wrap((args) => searchDocs(documents, args)),
+  );
+if (documents)
+  server.registerTool(
+    'deadlines',
+    {
+      description:
+        'Материалы КФУ о сроках и порядке учёбы. Доступность проверяет локальное приложение по роли преподавателя.',
+      inputSchema: { query: z.string().min(2).max(500) },
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    wrap((args) => searchDocs(documents, { ...args, limit: 3 })),
+  );
 server.registerTool(
   'search_kfu',
   {
@@ -65,6 +93,7 @@ server.registerTool(
           'День недели, сегодня, завтра, дата ГГГГ-ММ-ДД; пустая строка — вся неделя.',
         ),
       refresh: z.boolean().default(false),
+      cacheOnly: z.boolean().default(false),
     },
     annotations: { readOnlyHint: true, openWorldHint: true },
   },

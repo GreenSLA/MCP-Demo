@@ -1160,3 +1160,36 @@ a {
     padding-left: 11px;
   }
 }
+.auth-shell {
+  display: grid;
+  min-height: 100svh;
+  place-items: center;
+  padding: 20px;
+}
+.auth-shell .auth-card {
+  position: static;
+  width: min(100%, 420px);
+  margin: 0;
+}
+.auth-card h1 {
+  font-size: 1.6rem;
+  margin-bottom: 1rem;
+}
+.account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+.account-history {
+  display: grid;
+  gap: .35rem;
+  margin: 0 0 .75rem;
+  font-size: .8rem;
+}
+.account-history select {
+  max-width: 100%;
+}
+.account-history button {
+  justify-self: start;
+}
